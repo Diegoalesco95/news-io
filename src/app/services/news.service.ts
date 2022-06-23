@@ -1,10 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 import { environment } from 'src/environments/environment';
-import { Article, NewsResponse } from 'src/app/interfaces';
+import {
+  Article,
+  ArticlesByCategoryAndPage,
+  NewsResponse,
+} from 'src/app/interfaces';
 
 @Injectable({
   providedIn: 'root',
@@ -12,30 +16,61 @@ import { Article, NewsResponse } from 'src/app/interfaces';
 export class NewsService {
   private apiKey = environment.apiKey;
   private apiUrl = environment.apiUrl;
+  private articlesByCategoryAndPages: ArticlesByCategoryAndPage = {};
 
   constructor(private httpClient: HttpClient) {}
 
-  getTopHeadlines(): Observable<Article[]> {
-    return this.httpClient
-      .get<NewsResponse>(`${this.apiUrl}/top-headlines`, {
-        params: {
-          country: 'us',
-          category: 'business',
-          apiKey: this.apiKey,
-        },
-      })
-      .pipe(map(({ articles }) => articles));
+  getTopHeadlinesByCategory(
+    category: string,
+    loadMore = false
+  ): Observable<Article[]> {
+    if (loadMore) {
+      return this.getArticlesByCategory(category);
+    }
+
+    if (this.articlesByCategoryAndPages[category]) {
+      return of(this.articlesByCategoryAndPages[category].articles);
+    }
+
+    return this.getArticlesByCategory(category);
   }
 
-  getTopHeadlinesByCategory(category: string): Observable<Article[]> {
-    return this.httpClient
-      .get<NewsResponse>(`${this.apiUrl}/top-headlines`, {
-        params: {
-          country: 'us',
-          category,
-          apiKey: this.apiKey,
-        },
+  private getArticlesByCategory(category: string) {
+    if (!Object.keys(this.articlesByCategoryAndPages).includes(category)) {
+      this.articlesByCategoryAndPages[category] = {
+        page: 0,
+        articles: [],
+      };
+    }
+
+    const page = this.articlesByCategoryAndPages[category].page + 1;
+
+    return this.executeQuery<NewsResponse>({ category, page }).pipe(
+      map(({ articles }) => {
+        if (articles.length === 0) {
+          return this.articlesByCategoryAndPages[category].articles;
+        }
+
+        this.articlesByCategoryAndPages[category] = {
+          page,
+          articles: [
+            ...this.articlesByCategoryAndPages[category].articles,
+            ...articles,
+          ],
+        };
+
+        return this.articlesByCategoryAndPages[category].articles;
       })
-      .pipe(map(({ articles }) => articles));
+    );
+  }
+
+  private executeQuery<T>(params: { [key: string]: string | number }) {
+    return this.httpClient.get<T>(`${this.apiUrl}/top-headlines`, {
+      params: {
+        ...params,
+        country: 'us',
+        apiKey: this.apiKey,
+      },
+    });
   }
 }

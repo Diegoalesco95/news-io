@@ -19,3 +19,10 @@ export interface NewsResponse {
   status: string;
   totalResults: number;
 }
+
+export interface ArticlesByCategoryAndPage {
+  [category: string]: {
+    page: number;
+    articles: Article[];
+  };
+}
