@@ -6,6 +6,8 @@ import { SocialSharing } from '@awesome-cordova-plugins/social-sharing/ngx';
 
 import { Article } from 'src/app/interfaces';
 
+import { StorageService } from 'src/app/services/storage.service';
+
 @Component({
   selector: 'app-article',
   templateUrl: './article.component.html',
@@ -19,7 +21,8 @@ export class ArticleComponent {
     private iab: InAppBrowser,
     private platform: Platform,
     private actionsSheetCtrl: ActionSheetController,
-    private socialSharing: SocialSharing
+    private socialSharing: SocialSharing,
+    private storageService: StorageService
   ) {}
 
   openArticle() {
@@ -31,6 +34,10 @@ export class ArticleComponent {
   }
 
   async openOptions() {
+    const articleInFavorite = this.storageService.articleIsFavorite(
+      this.article
+    );
+
     const shareBtn = {
       text: 'Share',
       icon: 'share-outline',
@@ -39,8 +46,8 @@ export class ArticleComponent {
 
     const normalBtns = [
       {
-        text: 'Favorite',
-        icon: 'heart-outline',
+        text: articleInFavorite ? 'Remove from favorites' : 'Add to favorites',
+        icon: articleInFavorite ? 'trash-outline' : 'heart-outline',
         handler: () => this.onToggleFavorite(),
       },
       {
@@ -69,6 +76,6 @@ export class ArticleComponent {
   }
 
   onToggleFavorite() {
-    console.log('Favorite');
+    this.storageService.saveRemoveArticle(this.article);
   }
 }
